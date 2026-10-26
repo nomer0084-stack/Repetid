@@ -1,0 +1,493 @@
+import { useState, type FormEvent, type ReactNode } from "react";
+import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "framer-motion";
+import { ArrowDown, ArrowRight, ArrowUpRight, Copy, Menu, Plus, Send, X } from "lucide-react";
+
+const LESSON_PRICE = "1 499 ₽";
+const LESSON_DURATION = "60 минут";
+const CONTACT_PHONE = "+7 926 020 00 97";
+const MAX_PHONE = "+7 999 943 17 76";
+const TELEGRAM_USERNAME: string = "";
+const MAX_PROFILE_URL: string = "";
+const phoneHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
+const telegramUrl = TELEGRAM_USERNAME.trim()
+  ? `https://t.me/${TELEGRAM_USERNAME.trim().replace(/^@/, "")}`
+  : `https://t.me/${CONTACT_PHONE.replace(/[^\d+]/g, "")}`;
+
+const navigation = [
+  { label: "Предметы", href: "#subjects" },
+  { label: "Как проходят занятия", href: "#how-it-works" },
+  { label: "Стоимость", href: "#price" },
+];
+
+const subjects = [
+  {
+    number: "01",
+    letters: "Aa",
+    name: "Английский язык",
+    description: "Разбираем грамматику, пополняем словарный запас и учимся выражать свои мысли.",
+    className: "english",
+  },
+  {
+    number: "02",
+    letters: "Ая",
+    name: "Русский язык",
+    description: "Объясняем правила простыми словами, тренируем грамотность и закрепляем знания.",
+    className: "russian",
+  },
+];
+
+const steps = [
+  {
+    number: "01",
+    title: "Знакомимся",
+    description: "Вы рассказываете о классе, предмете и темах, с которыми нужна помощь.",
+  },
+  {
+    number: "02",
+    title: "Договариваемся",
+    description: "Обсуждаем ваши задачи и выбираем удобное время для онлайн-встречи.",
+  },
+  {
+    number: "03",
+    title: "Занимаемся",
+    description: "Разбираем сложное по шагам, задаём вопросы и закрепляем материал на практике.",
+  },
+];
+
+const questions = [
+  {
+    question: "Для каких классов подходят занятия?",
+    answer: "Занимаемся с учениками 5, 6, 7 и 8 классов. Можно выбрать английский или русский язык.",
+  },
+  {
+    question: "Сколько длится занятие и сколько стоит?",
+    answer: `Одно занятие длится ${LESSON_DURATION} и стоит ${LESSON_PRICE}.`,
+  },
+  {
+    question: "Как проходят уроки?",
+    answer: "Встречаемся онлайн, поэтому заниматься можно из дома или любого другого удобного места. Детали и время обсудим при записи.",
+  },
+  {
+    question: "Как записаться на занятие?",
+    answer: "Заполните короткую форму ниже или свяжитесь с нами по телефону, в Telegram или MAX.",
+  },
+];
+
+function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      className={className}
+      initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.12 }}
+      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Spark({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <path d="M24 3v42M3 24h42M9.2 9.2l29.6 29.6M38.8 9.2 9.2 38.8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Logo({ light = false }: { light?: boolean }) {
+  return (
+    <a href="#top" className={`logo${light ? " logo-light" : ""}`} aria-label="Ясно, на главную">
+      ясно<span>.</span>
+    </a>
+  );
+}
+
+function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openQuestion, setOpenQuestion] = useState<number | null>(0);
+  const [name, setName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [grade, setGrade] = useState("");
+  const [formMessage, setFormMessage] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
+  const reduceMotion = useReducedMotion();
+
+  const copyMaxPhone = async () => {
+    try {
+      await navigator.clipboard.writeText(MAX_PHONE);
+      setCopyMessage("Номер скопирован.");
+    } catch {
+      setCopyMessage("Не удалось скопировать номер. Его можно переписать вручную.");
+    }
+  };
+
+  const handleRequest = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!name.trim()) {
+      setFormMessage("Пожалуйста, укажите ваше имя.");
+      return;
+    }
+
+    const text = [
+      `Здравствуйте! Меня зовут ${name.trim()}.`,
+      `Хочу записаться на онлайн-занятие: ${subject}.`,
+      `Класс: ${grade}.`,
+    ].join("\n");
+
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const isMax = submitter?.value === "max";
+    const url = isMax
+      ? `https://max.ru/:share?text=${encodeURIComponent(text)}`
+      : `${telegramUrl}?text=${encodeURIComponent(text)}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+    setFormMessage(isMax
+      ? `В MAX выберите контакт ${MAX_PHONE} и подтвердите отправку сообщения.`
+      : "Отправьте подготовленное сообщение в Telegram. Если чат не открылся, позвоните нам.");
+  };
+
+  const heroItem = {
+    hidden: { opacity: 0, y: 24 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <div className="site-shell" id="top">
+        <header className="site-header">
+          <div className="container header-inner">
+            <Logo />
+            <span className="header-caption">онлайн-занятия<br />для школьников</span>
+
+            <nav className="desktop-nav" aria-label="Основная навигация">
+              {navigation.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}
+            </nav>
+
+            <a className="header-cta" href="#contact">
+              Связаться <ArrowUpRight size={17} strokeWidth={1.8} />
+            </a>
+            <button
+              className="menu-toggle"
+              type="button"
+              aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.nav
+                id="mobile-navigation"
+                className="mobile-nav"
+                aria-label="Мобильная навигация"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+              >
+                {navigation.map((item) => (
+                  <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>{item.label}</a>
+                ))}
+                <a href="#contact" onClick={() => setMenuOpen(false)}>Связаться <ArrowUpRight size={18} /></a>
+              </motion.nav>
+            )}
+          </AnimatePresence>
+        </header>
+
+        <main>
+          <section className="hero" aria-labelledby="hero-title">
+            <motion.div
+              className="hero-image"
+              initial={reduceMotion ? false : { scale: 1.045 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 1.8, ease: "easeOut" }}
+            />
+            <div className="hero-shade" />
+            <div className="container hero-inner">
+              <motion.div
+                className="hero-copy"
+                initial={reduceMotion ? "visible" : "hidden"}
+                animate="visible"
+                variants={{ visible: { transition: { staggerChildren: 0.13, delayChildren: 0.12 } } }}
+              >
+                <motion.p className="eyebrow hero-eyebrow" variants={heroItem}>
+                  <span className="eyebrow-dot" /> ОНЛАЙН-РЕПЕТИТОРСТВО
+                </motion.p>
+                <motion.h1 id="hero-title" variants={heroItem}>
+                  <span className="hero-brand">ясно<span>.</span></span>
+                  <span className="hero-headline">Учиться может<br />быть интересно.</span>
+                </motion.h1>
+                <motion.p className="hero-description" variants={heroItem}>
+                  Английский и русский для 5-8 классов. Объясняем спокойно, понятно и с интересом.
+                </motion.p>
+                <motion.div className="hero-actions" variants={heroItem}>
+                  <a className="button button-dark" href="#contact">
+                    Записаться на занятие <ArrowUpRight size={19} />
+                  </a>
+                  <a className="text-link hero-more" href="#subjects">
+                    Узнать больше <ArrowDown size={17} />
+                  </a>
+                </motion.div>
+              </motion.div>
+            </div>
+          </section>
+
+          <section className="subjects section-space" id="subjects" aria-labelledby="subjects-title">
+            <div className="container">
+              <Reveal>
+                <p className="section-label"><span>01 /</span> ПРЕДМЕТЫ</p>
+                <div className="section-heading-row">
+                  <h2 id="subjects-title">Разберёмся<br /><span className="heading-accent">вместе.</span></h2>
+                  <p>Два важных школьных предмета, которые могут стать понятнее и интереснее.</p>
+                </div>
+              </Reveal>
+
+              <div className="subject-grid">
+                {subjects.map((item, index) => (
+                  <Reveal className="subject-reveal" key={item.name} delay={index * 0.1}>
+                    <article className={`subject-item ${item.className}`}>
+                      <div className="subject-letters" aria-hidden="true">
+                        {item.letters}<Spark className="subject-spark" />
+                      </div>
+                      <div className="subject-content">
+                        <p className="item-number">{item.number} / ПРЕДМЕТ</p>
+                        <h3>{item.name}</h3>
+                        <p>{item.description}</p>
+                        <a
+                          className="arrow-link"
+                          href="#contact"
+                          onClick={() => {
+                            setSubject(item.name);
+                            setFormMessage("");
+                          }}
+                        >
+                          Выбрать предмет <ArrowUpRight size={18} />
+                        </a>
+                      </div>
+                    </article>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="process section-space" id="how-it-works" aria-labelledby="process-title">
+            <div className="container process-grid">
+              <div className="process-copy">
+                <Reveal>
+                  <p className="section-label"><span>02 /</span> КАК ВСЁ УСТРОЕНО</p>
+                  <h2 id="process-title">Всего три шага<br /><span className="heading-accent">до первого урока.</span></h2>
+                  <p className="process-intro">Начать проще, чем кажется. Мы рядом на каждом этапе.</p>
+                </Reveal>
+                <div className="steps">
+                  {steps.map((step, index) => (
+                    <Reveal key={step.number} delay={index * 0.08}>
+                      <div className="step">
+                        <span className="step-number">{step.number}</span>
+                        <div>
+                          <h3>{step.title}</h3>
+                          <p>{step.description}</p>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </div>
+              </div>
+              <Reveal className="process-visual" delay={0.12}>
+                <figure>
+                  <div className="process-image-wrap">
+                    <img src="/images/study-detail.jpg" alt="Тетрадь и ноутбук во время онлайн-занятия" loading="lazy" />
+                  </div>
+                  <figcaption><span>УЧИМСЯ ТАМ, ГДЕ УДОБНО</span><Spark className="caption-spark" /></figcaption>
+                </figure>
+              </Reveal>
+            </div>
+          </section>
+
+          <section className="price section-space" id="price" aria-labelledby="price-title">
+            <div className="container">
+              <Reveal>
+                <p className="section-label"><span>03 /</span> СТОИМОСТЬ</p>
+                <div className="price-grid">
+                  <div className="price-heading">
+                    <h2 id="price-title">Всё просто<br />и <span>прозрачно.</span></h2>
+                    <p>Один час, посвящённый знаниям и вашим целям.</p>
+                  </div>
+                  <div className="price-details">
+                    <p className="price-value">{LESSON_PRICE}</p>
+                    <p className="price-caption">ОДНО ЗАНЯТИЕ <span /> {LESSON_DURATION.toUpperCase()}</p>
+                    <a className="button button-dark price-button" href="#contact">
+                      Записаться на занятие <ArrowUpRight size={19} />
+                    </a>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+
+          <section className="faq section-space" aria-labelledby="faq-title">
+            <div className="container faq-grid">
+              <Reveal className="faq-intro">
+                <p className="section-label"><span>04 /</span> ЕСТЬ ВОПРОСЫ?</p>
+                <h2 id="faq-title">Отвечаем<br /><span className="heading-accent">на главные.</span></h2>
+                <p>А если не нашли свой вопрос, просто напишите нам.</p>
+                <a className="arrow-link" href="#contact">Связаться с нами <ArrowUpRight size={18} /></a>
+              </Reveal>
+              <Reveal className="faq-list" delay={0.1}>
+                {questions.map((item, index) => {
+                  const isOpen = openQuestion === index;
+                  return (
+                    <div className={`faq-item${isOpen ? " is-open" : ""}`} key={item.question}>
+                      <button
+                        className="faq-question"
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={`faq-answer-${index}`}
+                        onClick={() => setOpenQuestion(isOpen ? null : index)}
+                      >
+                        <span>{item.question}</span>
+                        <Plus size={22} strokeWidth={1.6} />
+                      </button>
+                      <motion.div
+                        id={`faq-answer-${index}`}
+                        className="faq-answer-wrap"
+                        initial={false}
+                        animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
+                        transition={{ duration: 0.28, ease: "easeInOut" }}
+                        aria-hidden={!isOpen}
+                      >
+                        <p className="faq-answer">{item.answer}</p>
+                      </motion.div>
+                    </div>
+                  );
+                })}
+              </Reveal>
+            </div>
+          </section>
+
+          <section className="contact section-space" id="contact" aria-labelledby="contact-title">
+            <div className="container contact-grid">
+              <Reveal className="contact-copy">
+                <p className="section-label section-label-light"><span>05 /</span> ДАВАЙТЕ ЗНАКОМИТЬСЯ</p>
+                <h2 id="contact-title">Скажем<br /><span>привет!</span></h2>
+                <p className="contact-intro">Расскажите, какой предмет хотите подтянуть, и вместе обсудим детали.</p>
+
+                <div className="contact-details">
+                  <div className="contact-detail">
+                    <span>ТЕЛЕФОН И TELEGRAM</span>
+                    <a className="contact-phone" href={phoneHref(CONTACT_PHONE)}>{CONTACT_PHONE} <ArrowUpRight size={19} /></a>
+                    <div className="messenger-actions">
+                      <a className="messenger-link" href={telegramUrl} target="_blank" rel="noreferrer">
+                        <Send size={17} /> Написать в Telegram <ArrowUpRight size={16} />
+                      </a>
+                    </div>
+                  </div>
+                  <div className="contact-detail">
+                    <span>МЕССЕНДЖЕР MAX</span>
+                    <p className="contact-number">{MAX_PHONE}</p>
+                    <p className="contact-hint">В MAX откройте «Контакты» и найдите нас по этому номеру.</p>
+                    <div className="messenger-actions">
+                      <button className="messenger-link" type="button" onClick={copyMaxPhone}>
+                        <Copy size={16} /> Скопировать номер
+                      </button>
+                      {MAX_PROFILE_URL && (
+                        <a className="messenger-link" href={MAX_PROFILE_URL} target="_blank" rel="noreferrer">
+                          Открыть MAX <ArrowUpRight size={16} />
+                        </a>
+                      )}
+                    </div>
+                    {copyMessage && <p className="copy-feedback" role="status">{copyMessage}</p>}
+                  </div>
+                </div>
+              </Reveal>
+
+              <Reveal className="form-reveal" delay={0.12}>
+                <div className="request-panel">
+                  <div className="form-heading">
+                    <div>
+                      <p className="form-kicker">ПЕРВЫЙ ШАГ</p>
+                      <h3>Давайте на урок!</h3>
+                    </div>
+                    <Spark className="form-spark" />
+                  </div>
+                  <p className="form-intro">Пара деталей, чтобы начать разговор.</p>
+                  <form onSubmit={handleRequest}>
+                    <label htmlFor="request-name">Как вас зовут?</label>
+                    <input
+                      id="request-name"
+                      name="name"
+                      type="text"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Ваше имя"
+                      autoComplete="name"
+                      maxLength={60}
+                      required
+                    />
+
+                    <div className="form-row">
+                      <div>
+                        <label htmlFor="request-subject">Предмет</label>
+                        <select id="request-subject" name="subject" value={subject} onChange={(event) => setSubject(event.target.value)} required>
+                          <option value="" disabled>Выберите</option>
+                          <option value="Английский язык">Английский язык</option>
+                          <option value="Русский язык">Русский язык</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="request-grade">Класс</label>
+                        <select id="request-grade" name="grade" value={grade} onChange={(event) => setGrade(event.target.value)} required>
+                          <option value="" disabled>Выберите</option>
+                          {[5, 6, 7, 8].map((item) => <option value={`${item} класс`} key={item}>{item} класс</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button className="button button-blue form-submit" type="submit" name="messenger" value="telegram">
+                      Перейти в Telegram <ArrowUpRight size={19} />
+                    </button>
+                    <button className="button button-outline form-submit-max" type="submit" name="messenger" value="max">
+                      Выбрать контакт в MAX <ArrowUpRight size={19} />
+                    </button>
+                    <p className="form-note">В Telegram отправьте готовое сообщение. В MAX выберите контакт {MAX_PHONE} и подтвердите отправку.</p>
+                    {formMessage && <p className="form-feedback" role="status">{formMessage}</p>}
+                  </form>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+        </main>
+
+        <footer className="footer">
+          <div className="container footer-main">
+            <div>
+              <Logo light />
+              <p>Понятные занятия для<br />больших маленьких побед.</p>
+            </div>
+            <div className="footer-nav" aria-label="Навигация в подвале">
+              <a href="#subjects">Предметы</a>
+              <a href="#how-it-works">Как проходят занятия</a>
+              <a href="#price">Стоимость</a>
+              <a href="#contact">Контакты</a>
+            </div>
+            <a className="footer-top" href="#top" aria-label="Вернуться наверх"><ArrowUpRight size={21} /></a>
+          </div>
+          <div className="container footer-bottom">
+            <span>© {new Date().getFullYear()} ЯСНО. ОНЛАЙН-РЕПЕТИТОРСТВО</span>
+            <a href="#contact">ДО ВСТРЕЧИ НА УРОКЕ <ArrowRight size={15} /></a>
+          </div>
+        </footer>
+      </div>
+    </MotionConfig>
+  );
+}
+
+export default App;
